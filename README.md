@@ -30,7 +30,7 @@ Three graph nodes rather than one node per sub-question — this keeps state man
 • *Cheap Tier:* `openai/gpt-oss-20b` (Used for sub-questions classified as low-complexity)
 • *Strong Tier:* `openai/gpt-oss-120b` (Used for planning, synthesis, and sub-questions classified as high-complexity)
 
-📌 *Note:* Pricing in `CONFIG["pricing"]` is used for relative cost comparison between tiers, not as billed Groq pricing. Verify current rates at groq.com/pricing before quoting numbers externally.
+📌 *Note:* Pricing in `CONFIG["pricing"]` is used for relative cost comparison between tiers,rates from Groq's pricing page. Verify current rates at groq.com/pricing before quoting numbers externally.
 
 ────────────────────────────
 
@@ -85,7 +85,7 @@ Five test queries — each blending a factual and a reasoning component — run 
 
 📊 *Summary across all 5 queries:*
 
-• *Total Cost:* Routed: $0.0002773 | Baseline: $0.004006 | *30.8% cheaper*
+• *Total Cost:* Routed: $0.002773 | Baseline: $0.004006 | *30.8% cheaper*
 • *Total Latency:* Routed: 33.57s | Baseline: 66.61s | *49.6% faster*
 
 Routing consistently sent purely factual sub-questions to the cheap tier and reserved the strong tier for genuinely comparative/explanatory sub-questions, cutting cost by roughly a third and more than halving total latency across the test set.
@@ -96,8 +96,7 @@ Routing consistently sent purely factual sub-questions to the cheap tier and res
 
 • *Output truncation on the strong tier:* Initial `max_tokens` limits (300/500) were sized for short factual answers, but the strong model produces multi-section, table-heavy explanations for reasoning questions — every strong-tier sub-answer was hitting the ceiling and cutting off mid-sentence. Fixed by raising `max_tokens` (ultimately 2000 for the strong tier) and adding an explicit `_was_truncated()` check via `finish_reason == "length"` so truncation is detected and flagged rather than silently guessed at.
 • *Rate-limit errors from oversized synthesis prompts:* The writer node was feeding full, untruncated sub-answers into the synthesis prompt, pushing requests over Groq's tokens-per-minute ceiling. Fixed by capping each sub-answer's contribution to the writer's context (~600 characters) and wrapping all model calls in a `tenacity`-based retry with exponential backoff (`_invoke_with_retry`), so transient 429s are retried instead of crashing the pipeline.
-• *Planner JSON-parsing fallback:* If the planner's response isn't valid JSON, `planner_node` degrades gracefully to treating the original query as a single sub-question rather than crashing, verified against a simulated malformed response before being removed from the codebase.
-
+• *Planner JSON-parsing fallback:* If the planner's response isn't valid JSON, `planner_node` degrades gracefully to treating the original query as a single sub-question rather than crashing, tested against a simulated malformed response.
 ────────────────────────────
 
 🧪 *TESTING PERFORMED*
